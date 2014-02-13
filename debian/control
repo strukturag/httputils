@@ -1,0 +1,12 @@
+Source: golang-httputils-dev
+Section: golang
+Priority: extra
+Maintainer: Simon Eisenmann <simon@struktur.de>
+Build-Depends: debhelper (>= 8.0.0)
+Standards-Version: 3.9.3
+
+Package: golang-httputils-dev
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Common helpers for HTTP servers in Go
+ Common helper utilities for HTTP servers implemented in Go.

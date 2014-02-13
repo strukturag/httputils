@@ -1,0 +1,29 @@
+golang-httputils-dev (0.1.0) precise; urgency=low
+
+  * Initial public release. 
+
+ -- Simon Eisenmann <simon@struktur.de>  Thu, 13 Feb 2014 14:46:51 +0100
+
+golang-httputils-dev (0.0.4) precise; urgency=low
+
+  * Add methods for basic request content type processing.
+
+ -- Lance Cooper <lance@struktur.de>  Fri, 03 Jan 2014 19:14:44 -0600
+
+golang-httputils-dev (0.0.3) precise; urgency=low
+
+  * Add method to create welcome api handler.
+
+ -- Lance Cooper <lance@struktur.de>  Wed, 02 Oct 2013 11:39:22 +0200
+
+golang-httputils-dev (0.0.2) precise; urgency=low
+
+  * Support setting permissions on unix domain sockets.
+
+ -- Lance Cooper <lance@struktur.de>  Thu, 15 Aug 2013 15:44:43 +0200
+
+golang-httputils-dev (0.0.1) precise; urgency=low
+
+  * Initial release.
+
+ -- Simon Eisenmann <simon@struktur.de>  Mon, 01 Jul 2013 19:13:48 +0200
