@@ -1,0 +1,8 @@
+# stats available at
+# https://travis-ci.org/strukturag/httputils/
+language: go
+
+go:
+  - 1.1
+  - 1.2
+  - tip
