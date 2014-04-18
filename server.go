@@ -72,7 +72,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	if srv.TLSConfig != nil {
 		*config = *srv.TLSConfig
 	}
-	
+
 	var err error
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
@@ -80,7 +80,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 		return err
 	}
 
-    return srv.ListenAndServeTLSWithConfig(config)
+	return srv.ListenAndServeTLSWithConfig(config)
 
 }
 
@@ -97,12 +97,12 @@ func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
 	if config == nil {
 		return errors.New("TLSConfig required")
 	}
-	if config.NextProtos == nil {
-		config.NextProtos = []string{"http/1.1"}
-	}
-
 	if len(config.Certificates) == 0 {
 		return errors.New("TLSConfig has no certificate")
+	}
+
+	if config.NextProtos == nil {
+		config.NextProtos = []string{"http/1.1"}
 	}
 
 	var err error
