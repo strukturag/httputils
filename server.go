@@ -68,19 +68,11 @@ func (srv *Server) ListenAndServe() error {
 // until the socket closes or an exit signal is received.
 func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 
-	addr := srv.Addr
-	if addr == "" {
-		addr = ":https"
-	}
-
 	config := &tls.Config{}
 	if srv.TLSConfig != nil {
 		*config = *srv.TLSConfig
 	}
-	if config.NextProtos == nil {
-		config.NextProtos = []string{"http/1.1"}
-	}
-
+	
 	var err error
 	config.Certificates = make([]tls.Certificate, 1)
 	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
@@ -88,49 +80,19 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 		return err
 	}
 
-	var closing = false
-	var l net.Listener
-	if l, err = srv.socketListen(addr); err != nil {
-		return err
-	}
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		s := <-sig
-		msg := "Received exit signal %d - Closing ..."
-		if srv.Logger != nil {
-			srv.Logger.Printf(msg, s)
-		} else {
-			log.Printf(msg, s)
-		}
-		closing = true
-		l.Close()
-	}()
-
-	tlsListener := tls.NewListener(l, config)
-
-	err = srv.Serve(tlsListener)
-	if err != nil {
-		if closing {
-			return nil
-		}
-	}
-	return err
+    return srv.ListenAndServeTLSWithConfig(config)
 
 }
 
 // ListenAndServeTLSAdvanced binds sockets according to the configuration
 // of srv and blocks until the socket closes or an exit signal is received. A
 // TLSConfig needs to be available at the server.
-func (srv *Server) ListenAndServeTLSAdvanced() error {
+func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
 
 	addr := srv.Addr
 	if addr == "" {
 		addr = ":https"
 	}
-
-	config := srv.TLSConfig
 
 	if config == nil {
 		return errors.New("TLSConfig required")
