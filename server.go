@@ -5,6 +5,7 @@
 package httputils
 
 import (
+	_ "crypto/sha512" // Make sure to link in SHA512 (see https://codereview.appspot.com/84700045/).
 	"crypto/tls"
 	"errors"
 	"fmt"
