@@ -6,6 +6,7 @@ package httputils
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -87,6 +88,62 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 		return err
 	}
 
+	var closing = false
+	var l net.Listener
+	if l, err = srv.socketListen(addr); err != nil {
+		return err
+	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		s := <-sig
+		msg := "Received exit signal %d - Closing ..."
+		if srv.Logger != nil {
+			srv.Logger.Printf(msg, s)
+		} else {
+			log.Printf(msg, s)
+		}
+		closing = true
+		l.Close()
+	}()
+
+	tlsListener := tls.NewListener(l, config)
+
+	err = srv.Serve(tlsListener)
+	if err != nil {
+		if closing {
+			return nil
+		}
+	}
+	return err
+
+}
+
+// ListenAndServeTLSAdvanced binds sockets according to the configuration
+// of srv and blocks until the socket closes or an exit signal is received. A
+// TLSConfig needs to be available at the server.
+func (srv *Server) ListenAndServeTLSAdvanced() error {
+
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":https"
+	}
+
+	config := srv.TLSConfig
+
+	if config == nil {
+		return errors.New("TLSConfig required")
+	}
+	if config.NextProtos == nil {
+		config.NextProtos = []string{"http/1.1"}
+	}
+
+	if len(config.Certificates) == 0 {
+		return errors.New("TLSConfig has no certificate")
+	}
+
+	var err error
 	var closing = false
 	var l net.Listener
 	if l, err = srv.socketListen(addr); err != nil {
