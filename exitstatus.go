@@ -5,8 +5,8 @@
 package httputils
 
 import (
-    "os"
-    "sync"
+	"os"
+	"sync"
 )
 
 var exitStatus = 0
@@ -18,7 +18,7 @@ var exitInProgressMutex sync.Mutex
 //
 // This function is not guaranteed to be threadsafe.
 func Atexit(f func()) {
-    exitFuncs = append(exitFuncs, f)
+	exitFuncs = append(exitFuncs, f)
 }
 
 // SetExitStatus sets a process exit status which will be used by
@@ -26,11 +26,11 @@ func Atexit(f func()) {
 //
 // This function is threadsafe.
 func SetExitStatus(status int) {
-    exitMutex.Lock()
-    if exitStatus < status {
-        exitStatus = status
-    }
-    exitMutex.Unlock()
+	exitMutex.Lock()
+	if exitStatus < status {
+		exitStatus = status
+	}
+	exitMutex.Unlock()
 }
 
 // ExitWithStatus calls os.Exit with the status provided to SetExitStatus,
@@ -38,11 +38,11 @@ func SetExitStatus(status int) {
 //
 // This function is threadsafe.
 func ExitWithStatus() {
-    exitInProgressMutex.Lock()
-    for _, f := range exitFuncs {
-        f()
-    }
-    os.Exit(exitStatus)
-    // We never come here.
-    exitInProgressMutex.Unlock()
+	exitInProgressMutex.Lock()
+	for _, f := range exitFuncs {
+		f()
+	}
+	os.Exit(exitStatus)
+	// We never come here.
+	exitInProgressMutex.Unlock()
 }

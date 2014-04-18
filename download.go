@@ -5,13 +5,13 @@
 package httputils
 
 import (
-    "net/http"
-    "path"
-    "strings"
+	"net/http"
+	"path"
+	"strings"
 )
 
 type fileDownloadHandler struct {
-    root http.FileSystem
+	root http.FileSystem
 }
 
 // FileDownloadServer returns a handler that serves HTTP requests
@@ -23,27 +23,27 @@ type fileDownloadHandler struct {
 //
 //     http.Handle("/", http.FileStaticServer(http.Dir("/tmp")))
 func FileDownloadServer(root http.FileSystem) http.Handler {
-    return &fileDownloadHandler{root}
+	return &fileDownloadHandler{root}
 }
 
 func (f *fileDownloadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
-    upath := r.URL.Path
-    if !strings.HasPrefix(upath, "/") {
-        upath = "/" + upath
-        r.URL.Path = upath
-    }
+	upath := r.URL.Path
+	if !strings.HasPrefix(upath, "/") {
+		upath = "/" + upath
+		r.URL.Path = upath
+	}
 
-    handler := func(w http.ResponseWriter, r *http.Request) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
 
-        upath = path.Clean(upath)
-        _, fn := path.Split(upath)
-        w.Header().Set("Content-Disposition", "attachment;filename=\""+fn+"\"")
+		upath = path.Clean(upath)
+		_, fn := path.Split(upath)
+		w.Header().Set("Content-Disposition", "attachment;filename=\""+fn+"\"")
 
-        ServeFile(w, r, f.root, upath)
+		ServeFile(w, r, f.root, upath)
 
-    }
+	}
 
-    handler(w, r)
+	handler(w, r)
 
 }

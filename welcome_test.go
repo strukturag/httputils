@@ -33,11 +33,11 @@ func TestMakeWelcomeHandler(t *testing.T) {
 		t.Fatalf("Failed to unmarshall json: %v", err)
 	}
 
-	if key, expected, actual := name, "Welcome", body[name];  expected != actual {
+	if key, expected, actual := name, "Welcome", body[name]; expected != actual {
 		t.Errorf("Expected key '%s' to have value '%s', but was '%s'", key, expected, actual)
 	}
 
-	if key, expected, actual := "version", version, body["version"];  expected != actual {
+	if key, expected, actual := "version", version, body["version"]; expected != actual {
 		t.Errorf("Expected key '%s' to have value '%s', but was '%s'", key, expected, actual)
 	}
 }

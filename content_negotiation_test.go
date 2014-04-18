@@ -80,7 +80,7 @@ func Test_ContainsContentType_FailsIfNoContentTypeIsProvided(t *testing.T) {
 func Test_ContainsContentType_SucceedsForMatchingContentTypes(t *testing.T) {
 	r, _ := http.NewRequest("", "", nil)
 	r.Header.Add("Content-Type", "text/xml")
-	for _, targetContentType := range []string {
+	for _, targetContentType := range []string{
 		"text/xml",
 		"text/*",
 		"*/*",

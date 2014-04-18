@@ -59,7 +59,7 @@ func parseMimeType(raw string) *mimeType {
 		// Apparently some old/broken implementations will do this.
 		subType = "*"
 	}
-	
+
 	return &mimeType{
 		typeParts[0], subType,
 	}
@@ -70,7 +70,7 @@ func (mime *mimeType) Matches(target *mimeType) bool {
 	if target.Type == "" || target.SubType == "" {
 		return false
 	}
-	
+
 	if mime.SubType == "*" {
 		return target.Type == mime.Type || mime.Type == "*"
 	}
