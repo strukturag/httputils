@@ -85,9 +85,8 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 
 }
 
-// ListenAndServeTLSAdvanced binds sockets according to the configuration
-// of srv and blocks until the socket closes or an exit signal is received. A
-// TLSConfig needs to be available at the server.
+// ListenAndServeTLSWithConfig binds sockets according to the provided TLS
+// config and blocks until the socket closes or an exit signal is received.
 func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
 
 	addr := srv.Addr
