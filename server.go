@@ -5,6 +5,9 @@
 package httputils
 
 import (
+	_ "crypto/sha512" // Make sure to link in SHA512 (see https://codereview.appspot.com/84700045/).
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -53,6 +56,79 @@ func (srv *Server) ListenAndServe() error {
 	}()
 
 	err = srv.Serve(l)
+	if err != nil {
+		if closing {
+			return nil
+		}
+	}
+	return err
+
+}
+
+// ListenAndServeTLS binds sockets according to the configuration of srv and blocks
+// until the socket closes or an exit signal is received.
+func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
+
+	config := &tls.Config{}
+	if srv.TLSConfig != nil {
+		*config = *srv.TLSConfig
+	}
+
+	var err error
+	config.Certificates = make([]tls.Certificate, 1)
+	config.Certificates[0], err = tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return err
+	}
+
+	return srv.ListenAndServeTLSWithConfig(config)
+
+}
+
+// ListenAndServeTLSWithConfig binds sockets according to the provided TLS
+// config and blocks until the socket closes or an exit signal is received.
+func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
+
+	addr := srv.Addr
+	if addr == "" {
+		addr = ":https"
+	}
+
+	if config == nil {
+		return errors.New("TLSConfig required")
+	}
+	if len(config.Certificates) == 0 {
+		return errors.New("TLSConfig has no certificate")
+	}
+
+	if config.NextProtos == nil {
+		config.NextProtos = []string{"http/1.1"}
+	}
+
+	var err error
+	var closing = false
+	var l net.Listener
+	if l, err = srv.socketListen(addr); err != nil {
+		return err
+	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		s := <-sig
+		msg := "Received exit signal %d - Closing ..."
+		if srv.Logger != nil {
+			srv.Logger.Printf(msg, s)
+		} else {
+			log.Printf(msg, s)
+		}
+		closing = true
+		l.Close()
+	}()
+
+	tlsListener := tls.NewListener(l, config)
+
+	err = srv.Serve(tlsListener)
 	if err != nil {
 		if closing {
 			return nil
