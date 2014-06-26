@@ -23,52 +23,34 @@ import (
 type Server struct {
 	http.Server
 	*log.Logger
+	listener net.Listener
+	closing  bool
+	quit     chan struct{}
 }
 
-// ListenAndServe binds sockets according to the configuration of srv and blocks
-// until the socket closes or an exit signal is received.
-func (srv *Server) ListenAndServe() error {
-
+// Listen binds sockets according to the configuration of srv.
+func (srv *Server) Listen() error {
 	addr := srv.Addr
 	if addr == "" {
 		addr = ":http"
 	}
 
-	var closing = false
 	var err error
-	var l net.Listener
-	if l, err = srv.socketListen(addr); err != nil {
-		return err
-	}
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		s := <-sig
-		msg := "Received exit signal %d - Closing ..."
-		if srv.Logger != nil {
-			srv.Logger.Printf(msg, s)
-		} else {
-			log.Printf(msg, s)
-		}
-		closing = true
-		l.Close()
-	}()
-
-	err = srv.Serve(l)
-	if err != nil {
-		if closing {
-			return nil
-		}
-	}
+	srv.listener, err = srv.socketListen(addr)
 	return err
-
 }
 
-// ListenAndServeTLS binds sockets according to the configuration of srv and blocks
+// ListenAndServe binds sockets according to the configuration of srv and blocks
 // until the socket closes or an exit signal is received.
-func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
+func (srv *Server) ListenAndServe() error {
+	if err := srv.Listen(); err != nil {
+		return err
+	}
+	return srv.serveUntilSignalled()
+}
 
+// ListenTLS binds sockets according to the configuration of srv.
+func (srv *Server) ListenTLS(certFile, keyFile string) error {
 	config := &tls.Config{}
 	if srv.TLSConfig != nil {
 		*config = *srv.TLSConfig
@@ -81,14 +63,22 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 		return err
 	}
 
-	return srv.ListenAndServeTLSWithConfig(config)
+	return srv.ListenTLSWithConfig(config)
+}
+
+// ListenAndServeTLS binds sockets according to the configuration of srv and blocks
+// until the socket closes or an exit signal is received.
+func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
+	if err := srv.ListenTLS(certFile, keyFile); err != nil {
+		return nil
+	}
+	return srv.serveUntilSignalled()
 
 }
 
 // ListenAndServeTLSWithConfig binds sockets according to the provided TLS
 // config and blocks until the socket closes or an exit signal is received.
-func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
-
+func (srv *Server) ListenTLSWithConfig(config *tls.Config) error {
 	addr := srv.Addr
 	if addr == "" {
 		addr = ":https"
@@ -105,15 +95,68 @@ func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
 		config.NextProtos = []string{"http/1.1"}
 	}
 
-	var err error
-	var closing = false
-	var l net.Listener
-	if l, err = srv.socketListen(addr); err != nil {
+	if l, err := srv.socketListen(addr); err == nil {
+		srv.listener = tls.NewListener(l, config)
+	} else {
 		return err
 	}
+	return nil
+}
 
+// ListenAndServeTLSWithConfig binds sockets according to the provided TLS
+// config and blocks until the socket closes or an exit signal is received.
+func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
+	if err := srv.ListenTLSWithConfig(config); err != nil {
+		return nil
+	}
+	return srv.serveUntilSignalled()
+}
+
+// Start runs a server whose sockets were previously bound by calling Listen,
+// ListenTLS, or ListenTLSWithConfig and waits for its socket to close or
+// Stop to be called.
+//
+// Note that signals are not handled by the server when started in this manner,
+// the caller should do so as needed.
+func (srv *Server) Start() error {
+	if srv.listener == nil {
+		return fmt.Errorf("Listen must be called before Start")
+	}
+
+	failed := make(chan error)
+	go func() {
+		failed <- srv.Serve(srv.listener)
+	}()
+
+	srv.quit = make(chan struct{})
+	select {
+	case <- srv.quit:
+		return nil
+	case err := <- failed:
+		if srv.closing {
+			err = nil
+		}
+		return err
+	}
+}
+
+// Stop closes a previously started server.
+func (srv *Server) Stop() error {
+	if srv.quit == nil {
+		return fmt.Errorf("Server was not started")
+	}
+
+	srv.closing = true
+	err := srv.listener.Close()
+	srv.quit <- struct{}{}	
+	return err
+}
+
+func (srv *Server) serveUntilSignalled() error {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(sig)
+
 	go func() {
 		s := <-sig
 		msg := "Received exit signal %d - Closing ..."
@@ -122,20 +165,10 @@ func (srv *Server) ListenAndServeTLSWithConfig(config *tls.Config) error {
 		} else {
 			log.Printf(msg, s)
 		}
-		closing = true
-		l.Close()
+		srv.Stop()
 	}()
 
-	tlsListener := tls.NewListener(l, config)
-
-	err = srv.Serve(tlsListener)
-	if err != nil {
-		if closing {
-			return nil
-		}
-	}
-	return err
-
+	return srv.Start()
 }
 
 func (srv *Server) socketListen(addr string) (net.Listener, error) {
