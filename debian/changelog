@@ -1,3 +1,10 @@
+golang-httputils-dev (0.1.2) precise; urgency=low
+
+  * Add support for listening and blocking for requests separately.
+  * Allow usage without signal handling.
+
+ -- Lance Cooper <lance@struktur.de>  Tue, 01 Jul 2014 20:34:50 -0500
+
 golang-httputils-dev (0.1.1) precise; urgency=low
 
   * Add support for TLS server creation.
